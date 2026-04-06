@@ -1,0 +1,412 @@
+{
+  "info": {
+    "_postman_id": "e0f89c1d-14c3-4de5-b6b2-3eb709a56541",
+    "name": "CSCI3916 HW4",
+    "description": "Postman tests for Assignment 4",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51837777",
+    "_collection_link": "https://go.postman.co/collection/51837777-e0f89c1d-14c3-4de5-b6b2-3eb709a56541?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Sign Up",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var username = 'testuser_' + Date.now();",
+              "pm.collectionVariables.set('dynamic_username', username);",
+              "console.log('Generated username:', username);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Sign up successful', function () {",
+              "  pm.expect(pm.response.code).to.equal(201);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"username\": \"{{dynamic_username}}\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/signup",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "signup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Sign In (saves JWT to env)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.token) {",
+              "  pm.environment.set('jwt_token', jsonData.token);",
+              "  console.log('Token saved to environment:', jsonData.token);",
+              "}",
+              "",
+              "pm.test('Sign in successful', function () {",
+              "  var jsonData = pm.response.json();",
+              "  pm.expect(pm.response.code).to.equal(200);",
+              "  pm.expect(jsonData.token).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var username = 'testuser_' + Date.now();\r",
+              "pm.collectionVariables.set('dynamic_username', username);\r",
+              "console.log('Generated username:', username);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser1\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/signin",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "signin"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get a Movies from DB",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.movies && jsonData.movies.length > 0) {",
+              "  pm.collectionVariables.set('movie_title', jsonData.movies[0].title);",
+              "  pm.collectionVariables.set('movie_id', jsonData.movies[0]._id);",
+              "  console.log('Movie title saved:', jsonData.movies[0].title);",
+              "  console.log('Movie ID saved:', jsonData.movies[0]._id);",
+              "}",
+              "",
+              "pm.test('Get all movies successful', function () {",
+              "  var jsonData = pm.response.json();",
+              "  pm.expect(pm.response.code).to.equal(200);",
+              "  pm.expect(jsonData.movies).to.be.an('array');",
+              "  pm.expect(jsonData.movies.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/movies",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "movies"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Valid Save Review",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Review created successfully', function () {",
+              "  var jsonData = pm.response.json();",
+              "  pm.expect(pm.response.code).to.equal(201);",
+              "  pm.expect(jsonData.message).to.equal('Review created!');",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{jwt_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"movieId\": \"69b7326b26d60e0160c7baed\",\n  \"username\": \"testuser\",\n  \"review\": \"An absolutely fantastic film!\",\n  \"rating\": 5\n}"
+        },
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/reviews",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "reviews"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Invalid Save Review (movie not in DB)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid review returns 404', function () {",
+              "  pm.expect(pm.response.code).to.equal(404);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{jwt_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"movieId\": \"000000000000000000000000\",\n  \"username\": \"testuser\",\n  \"review\": \"This movie does not exist\",\n  \"rating\": 1\n}"
+        },
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/reviews",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "reviews"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Valid Movie Request with ?reviews=true",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns movie with reviews array', function () {",
+              "  var jsonData = pm.response.json();",
+              "  pm.expect(pm.response.code).to.equal(200);",
+              "  pm.expect(jsonData.movie).to.have.property('reviews');",
+              "  pm.expect(jsonData.movie.reviews).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/movies/The Shining?reviews=true",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "movies",
+            "The Shining"
+          ],
+          "query": [
+            {
+              "key": "reviews",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Invalid Movie Request (not in DB)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid movie returns 404', function () {",
+              "  pm.expect(pm.response.code).to.equal(404);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "https://csci3916-hw4-s598.onrender.com/movies/MovieThatDoesNotExist",
+          "protocol": "https",
+          "host": [
+            "csci3916-hw4-s598",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "movies",
+            "MovieThatDoesNotExist"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "movie_title",
+      "value": ""
+    },
+    {
+      "key": "movie_id",
+      "value": ""
+    },
+    {
+      "key": "dynamic_username",
+      "value": ""
+    }
+  ]
+}
