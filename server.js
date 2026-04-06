@@ -7,7 +7,9 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const User = require('./Users');
 const Movie = require('./Movies');
-const Review = require('./Reviews'); // Make sure you have a Reviews model
+const Review = require('./Reviews'); 
+const rp = require('request-promise');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -17,6 +19,35 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
 
 const router = express.Router();
+
+const GA_TRACKING_ID = process.env.GA_KEY;
+const GA_SECRET = process.env.GA_SECRET;
+
+function trackDimension(category, action, label, value, dimension, metric) {
+  var options = {
+    method: 'POST',
+    url: `https://www.google-analytics.com/mp/collect?measurement_id=${GA_TRACKING_ID}&api_secret=${GA_SECRET}`,
+    body: JSON.stringify({
+      client_id: crypto.randomBytes(16).toString("hex"),
+      events: [{
+        name: 'movie_review',
+        params: {
+          event_category: category,   // Genre of movie (e.g. Western)
+          event_action: action,       // URL path (e.g. post /reviews)
+          event_label: label,         // API Request for Movie Review
+          value: value,               // 1
+          cd1: dimension,             // Custom Dimension: Movie Name
+          cm1: metric                 // Custom Metric: 1
+        }
+      }]
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    }
+  };
+  return rp(options);
+}
 
 router.post('/signup', async (req, res) => {
   if (!req.body.username || !req.body.password) {
@@ -42,27 +73,26 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-router.post('/signin', async (req, res) => {
-  try {
-    const user = await User.findOne({ username: req.body.username }).select('name username password');
+// SIGNIN
+router.post('/signin', function(req, res) {
+  var userNew = new User();
+  userNew.username = req.body.username;
+  userNew.password = req.body.password;
 
-    if (!user) {
-      return res.status(401).json({ success: false, msg: 'Authentication failed. User not found.' });
-    }
+  User.findOne({ username: userNew.username }).select('name username password').exec(function(err, user) {
+    if (err) return res.send(err);
+    if (!user) return res.status(401).send({ success: false, msg: 'Authentication failed. User not found.' });
 
-    const isMatch = await user.comparePassword(req.body.password);
-
-    if (isMatch) {
-      const userToken = { id: user._id, username: user.username };
-      const token = jwt.sign(userToken, process.env.SECRET_KEY, { expiresIn: '1h' });
-      res.json({ success: true, token: 'JWT ' + token });
-    } else {
-      res.status(401).json({ success: false, msg: 'Authentication failed. Incorrect password.' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Something went wrong. Please try again later.' });
-  }
+    user.comparePassword(userNew.password, function(isMatch) {
+      if (isMatch) {
+        var userToken = { id: user.id, username: user.username };
+        var token = jwt.sign(userToken, process.env.SECRET_KEY);
+        res.json({ success: true, token: 'JWT ' + token });
+      } else {
+        res.status(401).send({ success: false, msg: 'Authentication failed.' });
+      }
+    });
+  });
 });
 
 // MOVIES ROUTES
@@ -157,7 +187,6 @@ router.route('/movies/:title')
 
 // REVIEWS ROUTES
 router.route('/reviews')
-  // GET all reviews - authenticated
   .get(authJwtController.isAuthenticated, async (req, res) => {
     try {
       const reviews = await Review.find();
@@ -167,24 +196,39 @@ router.route('/reviews')
       res.status(500).json({ success: false, message: 'Error retrieving reviews.' });
     }
   })
-  // POST a new review - secured with JWT
   .post(authJwtController.isAuthenticated, async (req, res) => {
-    const { movieId, review, rating } = req.body;
+    const { movieId, username, review, rating } = req.body;
 
-    if (!movieId || !review || rating === undefined) {
-      return res.status(400).json({ success: false, message: 'Please include movieId, review, and rating.' });
+    if (!movieId || !username || !review || rating === undefined) {
+      return res.status(400).json({ success: false, message: 'Please include movieId, username, review, and rating.' });
     }
 
     try {
-      const newReview = new Review({ movieId, review, rating });
+      // Verify the movie exists before saving the review
+      const movie = await Movie.findById(movieId);
+      if (!movie) {
+        return res.status(404).json({ success: false, message: 'Movie not found.' });
+      }
+
+      const newReview = new Review({ movieId, username, review, rating });
       await newReview.save();
+
+      // Fire GA analytics event — fire-and-forget so GA failure won't break the API
+      trackDimension(
+        movie.genre,                    // Event Category: genre of movie
+        'post /reviews',                // Event Action: URL path
+        'API Request for Movie Review', // Event Label
+        '1',                            // Event Value
+        movie.title,                    // Custom Dimension: movie name
+        '1'                             // Custom Metric: 1
+      ).catch(err => console.error('GA tracking error:', err));
+
       res.status(201).json({ message: 'Review created!' });
     } catch (err) {
       console.error(err);
       res.status(500).json({ success: false, message: 'Error saving review.' });
     }
   })
-  // DELETE a review - optional
   .delete(authJwtController.isAuthenticated, async (req, res) => {
     const { movieId } = req.body;
 
