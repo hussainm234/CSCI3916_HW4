@@ -6,7 +6,11 @@ render link: https://csci3916-hw4-s598.onrender.com
 
 The Extra credit google analytics report has been added as a pdf [Extra credit event report](Event_report_GA.pdf)
 
-render link for HOMEWORK 5: https://csci3916-hw5-572h.onrender.com
+# Assignment 5 render links
+
+render link for hw5 (updated hw4 code): https://csci3916-hw4-s598.onrender.com
+
+render link for react page: https://csc3916-react19-ktx6.onrender.com
 
 ## Project
 
